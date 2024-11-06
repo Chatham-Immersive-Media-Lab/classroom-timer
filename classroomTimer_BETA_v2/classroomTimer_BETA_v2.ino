@@ -15,7 +15,7 @@ MD_MAX72XX mx = MD_MAX72XX(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
 #define ROT_CLK 2
 #define ROT_DT 3
 #define ROT_SW 4
-#define DEBOUNCE_DELAY 2  // Adjust this value as needed
+#define DEBOUNCE_DELAY 10  // Adjust this value as needed
 Encoder myEnc(ROT_CLK, ROT_DT);
 long oldPosition  = -999;
 
