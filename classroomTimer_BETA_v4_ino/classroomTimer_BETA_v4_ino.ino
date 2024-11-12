@@ -37,6 +37,24 @@ int noteDurations[] = { 300, 150, 150, 150, 150, 300, 300, 150, 150, 400 };
 //int noteDurations[] = { 500, 500 };
 
 
+// List of random phrases to display
+const char* phrases[] = {
+  "Where are we",
+  "IMM is lit",
+  "Hunter can you unlock the storage closet",
+  "The coffee machine is broken",
+  "It's time to take a break",
+  "Who's turn is it to make lunch?",
+  "Can we get more snacks?",
+  "Have you seen my notebook?",
+  "Lunch at 12:30?"
+};
+const int numPhrases = sizeof(phrases) / sizeof(phrases[0]);  // Number of phrases
+
+unsigned long lastScrollTime = 0;
+int scrollDelay = 100;  // Adjust delay for scrolling speed
+int scrollPosition = 64;  // Start with the phrase off the screen
+
 
 
 const unsigned long holdTimeUp = 200;       // Hold time for UP button in ms
@@ -87,16 +105,17 @@ void setup() {
 void loop() {
   if (!timerRunning) {
     if (animationPlaying) {
-      runAnimation();
+      runAnimation();  // Run the animation when it's playing
     } else if (millis() - lastActivityTime > idleTimeout) {
-      playIdleAnimation(); // Start idle animation if idle
+      playIdleAnimation();  // Trigger the idle animation after timeout
     } else {
-      handleButtons();
+      handleButtons();  // Handle button presses if there's activity
     }
   } else {
     updateLoadingBar();
   }
 }
+
 
 void handleButtons() {
   if (animationPlaying) {
@@ -165,6 +184,7 @@ void displayTimeOption() {
 void startTimer() {
   timerRunning = true;
   startTime = millis();
+  melodyPlayed = false;  // Reset the flag to allow melody playback
   mx.clear();
   Serial.println("Timer started!");
 }
@@ -203,22 +223,47 @@ void playIdleAnimation() {
     animationStartTime = millis();  // Initialize the start time for animation
   }
 
-  int t = (millis() - animationStartTime) / 200;  // Use elapsed time for smoother effect
-  int col = abs((t % 256) - 128);  // Bounce within the 128-pixel width (since 8 panels = 64 columns * 2)
+  // Get a random phrase from the list
+  int randomIndex = random(numPhrases);
+  const char* phrase = phrases[randomIndex];
 
-  mx.clear();
+  unsigned long currentMillis = millis();
   
-  // Loop through all 8 rows and set the appropriate point
-  for (int row = 0; row < 8; row++) {
-    mx.setPoint(row, col % 64, true);  // Modulo 64 ensures the column wraps around after 64
+  // Scroll the text every few milliseconds
+  if (currentMillis - lastScrollTime >= scrollDelay) {
+    lastScrollTime = currentMillis;
+    scrollPosition--;  // Move the text to the left
+
+    if (scrollPosition < -(strlen(phrase) * 6)) {  // If the text has completely scrolled off screen
+      scrollPosition = 64;  // Reset to the start position
+    }
+  }
+
+  // Display the phrase
+  mx.clear();  // Clear the display before drawing the new frame
+  int x = scrollPosition;  // Starting column for the phrase
+
+  for (int i = 0; phrase[i] != '\0'; i++) {
+    uint8_t cBuf[8];
+    mx.getChar(phrase[i], sizeof(cBuf) / sizeof(cBuf[0]), cBuf);
+    for (int j = 0; j < 5; j++) {  // Each character is 5 columns wide
+      for (int row = 0; row < 8; row++) {
+        bool pixelOn = bitRead(cBuf[j], row);
+        mx.setPoint(row, x + j, pixelOn);
+      }
+    }
+    x += 6;  // Move over by 6 columns for the next character (5 for the char + 1 for spacing)
   }
 }
 
+
+
+
 void runAnimation() {
   unsigned long elapsedTime = millis() - animationStartTime;
-  if (elapsedTime < 3000) {
+  if (elapsedTime < 18000) {
     // Continue the animation for 10 seconds
-    int elapsed = elapsedTime % 800;  // Loop every 800 ms
+    int elapsed = elapsedTime % 3200;  // Loop every 800 ms
     int radius = (elapsed / 100);  // Expand radius smoothly in 8 steps (0 to 7)
     
     mx.clear();
